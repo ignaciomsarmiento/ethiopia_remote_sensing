@@ -25,24 +25,6 @@ files<- files[files!="old"]
 dbs<-lapply(files,function(x) readRDS(here("data/temp_bases/",x)))
 
 
-# create_id<-function(x){
-#   x<-x %>% 
-#     dplyr::mutate(centroid=st_centroid(geometry)) %>% 
-#     dplyr::mutate(panel_id=as.character(centroid)) %>% 
-#     dplyr::select(-centroid,-geometry) 
-#   x
-# }
-# 
-# dbs<-lapply(dbs,create_id)
-
-
-# db1<-dbs[[2]]
-# with(db1,table(woreda,layer))
-# with(db0,table(woreda,layer))
-# db0<-dbs[[1]]
-# with(db0,table(woreda,layer))
-# mapview::mapview(list(db0), zcol = "woreda")
-
 dta<-do.call(rbind,dbs)
 
 dta<- dta %>% rename(record_id=layer_id)
