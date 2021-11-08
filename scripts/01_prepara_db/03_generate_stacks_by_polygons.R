@@ -62,13 +62,13 @@ create_db<-function(file_layer){
                                                    area_pixel=st_area(geometry))
     
     intersection<-suppressWarnings(st_intersection(poly_layer_sf,nm))
-    intersection<- intersection %>% mutate(area=st_area(geometry)) %>% dplyr::select(Name,pixel_id,land_use,area_pixel,area) %>% st_drop_geometry()
+    intersection<- intersection %>% mutate(area_land_use=st_area(geometry)) %>% dplyr::select(Name,pixel_id,land_use,area_pixel,area_land_use) %>% st_drop_geometry()
     return(intersection)
   }    
-  
+  #list_polygons<-list_polygons[1:2]
   polygons_ls<-lapply(list_polygons,intersecter)
-  polygons<-do.call(rbind,polygons_ls)
-  land_use_area<- polygons %>% group_by(pixel_id,land_use) %>% summarize(area=sum(area),.groups="drop")
+  
+  land_use_area<-do.call(rbind,polygons_ls)
   #--------------------
   
   # nm<-list_polygons[[1]]
@@ -110,11 +110,12 @@ create_db<-function(file_layer){
   poly_layer<-lapply(poly_layer0,band_pirate)
   cells<-do.call(rbind,poly_layer)
   cells <- cells %>% filter(pixel_id %in%land_use_area$pixel_id)
-  #mapview::mapview(list(poly_layer[[1]],list_polygons[[1]]))
+  # x<- poly_layer[[1]] %>% filter(pixel_id %in%land_use_area$pixel_id)
+  # mapview::mapview(list(x,list_polygons[[1]]))
   #cell <- cell %>% filter(pixel_id%in%land_use_area$pixel_id)
   cells<-left_join(land_use_area,cells)
-  cells<- cells %>% distinct(.keep_all = TRUE)
-  db<-  spread(cells,land_use,area)
+  db<- cells %>% distinct(.keep_all = TRUE)
+  
   
   
   saveRDS(db,here(paste0("data/temp_bases/",layer_id,".Rds")))  
