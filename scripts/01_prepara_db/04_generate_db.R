@@ -32,6 +32,16 @@ layer_data<-readRDS(here("data/records_2A_2019_2021.rds"))
 layer_data<- layer_data %>% st_drop_geometry()
 dta_no_geog<-dta %>%  left_join(layer_data)
 
-dta3 <- dta_no_geog %>% group_by(pixel_id) %>% mutate(n=n())
+#Pixel overlap up to 4 polygons
+dta3 <- dta_no_geog %>% group_by(pixel_id,date_acquisition) %>% mutate(n=n())
 table(dta3$n)
-saveRDS(dta_no_geog,here("data/merge_data_polyogns.Rds"))
+View(dta3 %>% filter(n>3))
+
+#For example this pixel overlaps 4 polygons, with different land use
+# x<-dta3 %>% filter(pixel_id=="c(261725, 1254525)")
+# mapview::mapview(x)
+
+
+#going to generate 2 dbs, one with land use, the other with the unique pixels
+
+saveRDS(dta_no_geog,here("data/merge_data_polygons.Rds"))
