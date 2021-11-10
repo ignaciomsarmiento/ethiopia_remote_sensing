@@ -73,7 +73,7 @@ create_db<-function(file_layer){
   
   # nm<-list_polygons[[1]]
   # x<-layer_star[[1]]
-  
+  # generate pixel_id  
   croper_centroid<-function(x,pgn){
     cell<-st_crop(x,st_bbox(pgn))
     cell<-st_as_sf(cell)
@@ -85,6 +85,7 @@ create_db<-function(file_layer){
   
   #x<-poly_layer0[[1]]
   #rm(x)
+  # generate bands for each pixel
   band_pirate<-function(x){
     db <- suppressMessages(left_join(x[[1]], as.data.frame(x[[2]])))
     for(i in 3:7) db <- suppressMessages(left_join(db, as.data.frame(x[[i]])))
