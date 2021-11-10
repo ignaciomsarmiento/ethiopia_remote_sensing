@@ -20,37 +20,65 @@ set.seed(10101)
 
 # Read data ---------------------------------------------------------------
 dta<-readRDS(here("data/merge_data_polyogns.Rds"))
+# 
+# dta<- dta %>% group_by(pixel_id) %>% mutate(drop=case_when(land_use=="Bare"~"Bare",
+#                                                            land_use=="Other"~"Other",
+#                                                            land_use=="Tree/Crop"~"Tree/Crop"
+#                                                            ))
+# dta3<- dta %>%group_by(pixel_id,date) %>% mutate(n=n())
+# z<- unique(dta3$pixel_id[!is.na(dta3$drop)])
+# x<-dta3 %>% filter(pixel_id%in%z) %>% select(pixel_id,date_acquisition,land_use,drop,n)
+# View(x)
+# View(x %>% filter(n>1))
+#rm(dta3,x)
 
+#land use labels
+land_use<-dta %>% dplyr::select(pixel_id,date_acquisition,Name,land_use,area_pixel,area_land_use)
+saveRDS(land_use,here("data/land_use_labels.rds"))
+rm(land_use)
+
+
+#keep pixels that belongs to one of these 3 classes
+dta<- dta %>% filter(land_use%in%c("Crop","Grazing","Improved forage","Tree"))
+poly_data<-readRDS(here("data/pilot_poligons_LU.rds")) %>% dplyr::select("Name",
+                                                                         "kebele",
+                                                                         "woreda") %>% st_drop_geometry()
+
+dta <-dta %>% left_join(.,poly_data)
 #Create date, ndvi, rename bands
-dta <-dta %>%  st_drop_geometry() %>% 
-              mutate(date=ymd(date_acquisition),
+dta <-dta %>%  mutate(date=ymd(date_acquisition),
                         ndvi=(B08-B04)/(B08+B04)) %>% 
               rename(blue=B02,
                      green=B03,
                      red=B04,
                      nir=B08) %>% 
-              dplyr::select("panel_id",
+              dplyr::select("pixel_id",
                             "date",
-                            "Name",
-                            "woreda",
                             "kebele",
-                            "land_use",
                             "blue",
                             "green",
                             "red",
                             "nir",
                             "ndvi",
-                            "cloudcov")
+                            "cloudcov") %>% distinct(.keep_all = TRUE)
 
+#some of the pixels are in more than 1 kebele, assign to first
+dta<-dta %>%group_by(pixel_id,date) %>%  mutate(n=n(),
+                                                one=1,
+                                                cumsum1=cumsum(one))
 
-
-
+#View(dta %>% filter(n>1))
+dta<- dta %>% filter(cumsum1==1) %>%  dplyr::select(-n,-one,-cumsum1)
+dta3<- dta %>%group_by(pixel_id,date) %>% mutate(n=n())
+table(dta3$n)
+rm(dta3)
+rm(dta3,poly_data)
 #dta_test<- dta %>% filter(panel_id %in% c("c(303985, 1265245)","c(301715, 1264405)"))
 #create lags
 
 db <-dta %>% 
-          arrange(panel_id,date) %>%   
-          group_by(panel_id) %>% 
+          arrange(pixel_id,date) %>%   
+          group_by(pixel_id) %>% 
           mutate(across(c(blue,green,red,nir,ndvi,cloudcov),.fns=~dplyr::lag(.x,n=1,order_by = date),.names = "lag1.{.col}"),
                  across(c(blue,green,red,nir,ndvi,cloudcov),.fns=~dplyr::lag(.x,n=2,order_by = date),.names = "lag2.{.col}"),
                  across(c(blue,green,red,nir,ndvi,cloudcov),.fns=~dplyr::lag(.x,n=3,order_by = date),.names = "lag3.{.col}"),
@@ -185,18 +213,6 @@ db <- db %>% mutate(#simple monthly (4) moving average
                     nir_w_center_9=nir*wldlg0_9 +lag1.nir*wlg1_9+lag2.nir*wlg2_9+lag3.nir*wlg3_9+lag4.nir*wlg4_9+lead1.nir*wld1_9+lead2.nir*wld2_9+lead3.nir*wld3_9+lead4.nir*wld4_9,
                     ndvi_w_center_9=ndvi*wldlg0_9 +lag1.ndvi*wlg1_9+lag2.ndvi*wlg2_9+lag3.ndvi*wlg3_9+lag4.ndvi*wlg4_9+lead1.ndvi*wld1_9+lead2.ndvi*wld2_9+lead3.ndvi*wld3_9+lead4.ndvi*wld4_9
                      )
-
-
-dta_mod_tot<- db %>%  
-  group_by(land_use,date) %>% 
-  summarize(across(c(starts_with("blue"),
-            starts_with("red"),
-            starts_with("green"),
-            starts_with("nir"),
-            starts_with("ndvi")),~mean(.x,na.rm=TRUE)),.groups="drop")
-  
-impfor<-dta_mod_tot %>% filter(land_use=="Improved forage") %>% select(date,starts_with("ndvi"))
-impfor<- impfor %>% pivot_longer(!date,names_to ="smoother",values_to="ndvi")
 
 
 #From all the smoothers ther best seem to be a ndvi weighted average centered 50 day. The weighs are the inverse of cloud coverage
