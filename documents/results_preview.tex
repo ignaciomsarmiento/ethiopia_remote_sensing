@@ -129,17 +129,19 @@
 
 
 
-
+\pagebreak
 \section{Land Use Classification}
 
 \subsection{Descriptive Statistics}
 
 \begin{itemize}
 \item There are 8 Kebeles (subdivisions) 
-\item In these Kebeles there are XX improved foraged plots which is XXX of the total polygons and XXXX of the area
-\item We kept in the data set polygons that are classified either as: Improved Forage, Crop, Grazing, and Tree. In the survey of the area some polygons were classified as Tree/Crop, Bare, but only in the Dil-betegel subdivision, and is less than 2\% of the area. To maintain consistency I also drop those polygons classified as other, since it is missing for some of the plots.\footnote{we can potentially drop the Afesa Kebele that is missing the ``Other'' class}. Table \ref{tab:XX} shows land use by Kebele and percentage area. Improved forage  accounts for   4.17\%, whereas Crop 29.84\%,  Grazing 40.75\%, and Tree  25.23\% of the total area.
+\item In these Kebeles 6\% (16) of the survey plots (249) are improved foraged plots .
+\item We kept in the data set polygons that are classified either as: Improved Forage, Crop, Grazing, and Tree. In the survey of the area some polygons were classified as Tree/Crop, Bare, but only in the Dil-betegel subdivision, and is less than 2\% of the area. To maintain consistency I also drop those polygons classified as other, since it is missing for some of the plots.\footnote{we can potentially drop the Afesa Kebele that is missing the ``Other'' class}. Table 2 shows land use by Kebele and percentage area. Improved forage  accounts for   4.17\%, whereas Crop 29.84\%,  Grazing 40.75\%, and Tree  25.23\% of the total area.
 \end{itemize}
 
+
+\input{../views/land_use_polygons_sample.tex}
 
 \input{../views/areas_polygons_sample.tex}
 
@@ -149,15 +151,38 @@
 \subsection{Remote sensing}
 
 
-We use Sentinel 2 products 
 
-Bottom-Of-Atmosphere reflectances in cartographic geometry   Systematic and on-user side (using Sentinel-2 Toolbox)   (each $100km x 100km$)
+
+%Bottom-Of-Atmosphere reflectances in cartographic geometry   Systematic and on-user side (using Sentinel-2 Toolbox)   (each $100km x 100km$)
 %Ojo esto es copia
-The Sentinel-2 Multispectral Instrument (MSI) comprises two satellites that observe the Earth at 10 m, 20 m, and 60 m spatial resolutions (Drusch et al. 2012). The 10 m spatial resolution is the highest amongst freely available satellite products. Another unique aspect of the Sentinel-2 data is the presence of three red edge bands, which are able to capture the strong reflectance of vegetation in the near infrared portion of the electromagnetic spectrum (EMS).
-The criteria for satellite imagery selection was that the scenes must contain little or no clouds and haze. The imagery must also be from different seasons to capture different plant phenological stages. As such, four Sentinel-2 scenes from 2017 and 2018 from tile 33VXG were included in the analysis. Three of the scenes were in 2017: May 04, July 06, and November 13, and one in 2018: January 27 (Figure 2). 
+%The Sentinel-2 Multispectral Instrument (MSI) comprises two satellites that observe the Earth at 10 m, 20 m, and 60 m spatial resolutions (Drusch et al. 2012). The 10 m spatial resolution is the highest amongst freely available satellite products. Another unique aspect of the Sentinel-2 data is the presence of three red edge bands, which are able to capture the strong reflectance of vegetation in the near infrared portion of the electromagnetic spectrum (EMS).
+
+
+We use Sentinel 2 products Bottom-Of-Atmosphere scenes at different spatial resolution levels. For land use classification, we use 76 scenes from Sentinel-2 beginning on 2019-09-09 and ending 2021-10-08, each scene has a 10 day difference. We construct a time series of NDVI using the near infrared (NIR) and red bands at the 10 m spatial resolution:
+
+\begin{align}
+NDVI = (NIR - Red) / (NIR + Red)
+\end{align}
+
+
+
+As a result we have 19,033 time series, the approximate distribution land use of these pixels are
 
 
 \input{../views/pixels_by_kebele.tex}
+
+
+
+there are multiple pixels that have multiple land use, so we keep 11,052  pixels that have 100\% coverage to train our model
+
+\input{../views/pixels_by_kebele_sample100.tex}
+
+
+Since there is cloud coverage in these scenes I smooth them out with a centered 90 day moving average and weight each scene by the inverse of cloud coverage, this way clear scence get more weight. This allows us to capture the time trend of the series without loosing data or interpolating. Cloud coverage attenuates the reflectance, but since we are not interested in between dates comparison but within dates, and the overall trend, the strategy works well.\footnote{Some preliminary robustness for 30,40,50,60,70, and 90 days moving averages; 90 day MA works best}
+
+
+
+
 % he Modified Normalized Difference Water Index (MNDWI) uses green and SWIR bands for the enhancement of open water features. It also diminishes built-up area features that are often correlated with open water in other indices.
 
 % MNDWI = (Green - SWIR) / (Green + SWIR)
@@ -166,32 +191,24 @@ The criteria for satellite imagery selection was that the scenes must contain li
 %     SWIR = pixel values from the short-wave infrared band
 
 % Reference: Xu, H. "Modification of Normalised Difference Water Index (NDWI) to Enhance Open Water Features in Remotely Sensed Imagery." International Journal of Remote Sensing 27, No. 14 (2006): 3025-3033." (ESRI, 2018)
+ 
 
 
 
-  \begin{figure}[H] \centering
+ %  \begin{figure}[H] \centering
+ %            \captionsetup{justification=centering}
+ %              \includegraphics[scale=0.15]{../views/NDVI_average_imp_forage_grazing_raw_final_db.png}
+              
+ % \end{figure}
+
+
+  
+\begin{figure}[H] \centering
             \captionsetup{justification=centering}
               \includegraphics[scale=0.15]{../views/NDVI_average_raw_final_db.png}
               
  \end{figure}
 
-
-
-  \begin{figure}[H] \centering
-            \captionsetup{justification=centering}
-              \includegraphics[scale=0.15]{../views/NDVI_average_imp_forage_grazing_raw_final_db.png}
-              
- \end{figure}
-
-
-  \begin{figure}[H] \centering
-            \captionsetup{justification=centering}
-              \includegraphics[scale=0.15]{../views/NDVI_average_raw_final_db_regions.png}
-              
- \end{figure}
-
-
-I smoothed out the series with a 90 day moving average weighted by cloud coverage. (Some preliminary robustness for 30,40,50,60,70) 90 works best
 
   \begin{figure}[H] \centering
             \captionsetup{justification=centering}
@@ -201,21 +218,11 @@ I smoothed out the series with a 90 day moving average weighted by cloud coverag
 
 
 
-  \begin{figure}[H] \centering
-            \captionsetup{justification=centering}
-              \includegraphics[scale=0.15]{../views/NDVI_average_imp_forage_grazing_smooth_final_db.png}
+ %  \begin{figure}[H] \centering
+ %            \captionsetup{justification=centering}
+ %              \includegraphics[scale=0.15]{../views/NDVI_average_imp_forage_grazing_smooth_final_db.png}
               
- \end{figure}
-
-
-
-
-  \begin{figure}[H] \centering
-            \captionsetup{justification=centering}
-              \includegraphics[scale=0.15]{../views/NDVI_average_smooth_final_db_regions}
-              
- \end{figure}
-
+ % \end{figure}
 
 
 
@@ -223,34 +230,204 @@ I smoothed out the series with a 90 day moving average weighted by cloud coverag
 \subsection{Model}
 
 
-I used a k-shapes clustering algorithm introduced by Paparrizos and Grabvano (2015). This is a clustering algorithm that proposes as a distance measure, a normalized version of the cross-correlation measure to consider the shapes of time series while comparing them. The idea is that, given the set of time series search for a "centroid" and assign the series to the closest centroid. 
+We used the k-shape clustering algorithm introduced by Paparrizos and Grabvano (2015). This is a clustering algorithm that proposes as a distance measure, a normalized version of the cross-correlation measure to consider the shapes of time series while comparing them. The idea is that, given the set of time series search for a "centroid" and assign the series to the closest centroid. 
 
-I only use NDVI and a smoothed version of NDVI (which is the one that performs the best), and an undersampling approach. (Still working on bootstraps for robustness) and a full version (takes a really long time to do 15k series)
+I only use NDVI and a smoothed version of NDVI (which is the one that performs the best), and an undersampling approach. 
+
+% \subsubsection{Approach}
+
+% The approach follows the idea of a boostrap aggregation. But here I do a double 
+
+% In centroid base learning there is randomness in shape extraction when choosing a reference series
 
 
 
-\subsubsection{Other unsuccessful approaches}
-
-I modeled land use as a function of the 3 bands and the NDVI:
-
-\begin{align}
-Land\,Use_{ij} =f(Blue, Green, Red, NDVI) + u_{ij}
-\end{align}
-
-where $Land\,Use_{ij}$ is the land use in pixel $i$ of polygon $j$. $f$ is the ML function that we use to predict land use. We explore 3 classes of models:
-
-\begin{itemize}
-  \item Binary classifications: In this case $Land\,Use_{ij}=I(Land\,Use_{ij}==Improved\,Forage)$ and 0 are the other classes
-  \item Multiclass classification where $Land\,Use_{ij}$ takes 4 classes: Improved Forage, Crop, Grazing, and Tree
-\end{itemize}
-
-The challenge was incorporating the time dimension, one approach was collapse to a single crossection and in different variables consider multiple moments  of the distribution of predictors: mean, sd, iqr, max, min. I did these for within pixel and between pixels of the same polygon for the entire time series, and quarterly (approximating the seasons, although there are no seasons in Ethiopia, but the idea was trying to capture the cycles seen in the time series).
-None of these were successfull so far
 
 \subsection{k-shapes}
 
 
-\subsubsection{Smoothed}
+Given the small number of pixels with improved forage we use a bootstrap unbalanced approach. In each of 1,000 bootstrap iterations we  sample pixels from each kebele (subdivision) in a way that the number of pixels with different land use evens out. We then average out the centroids given across this bootstrap samples, in this way we smooth out the randomness introduced by the undersampling. 
+
+The resulting centroids with their closest land use can be seen in the following figure:
+
+
+\begin{figure}[H] \centering
+  \captionsetup{justification=centering}
+\caption{Centroids by Land Use} 
+\centering
+  \includegraphics[scale=0.7]{../views/centroids_model.png}
+
+\end{figure}
+
+
+The model perfors quite satisfactory given the small number of classes for the improved forrage, table 5 shows the confusion matrix for 100\% coverage pixels.  Cluster 2 identifies Crop with above 91\% precision, while Centroid 4 for Tree, with similar precision. Cluster 1 and Cluster 3 identify Grazing and Improved Forage, which identifies correctly about 74\% of the series. The main challenge here is separating Grazing from Improved Forages. 24\% of the Improved Forage series is assigned to Cluster 1 that identifies Grazing, whereas 17\% of the grazing series are assigned to the Improved Forage cluster.
+
+\input{../views/confusion_table100.tex}
+
+
+\subsection{Where I'm missing}
+%\input{../views/confusion_table_all_series.tex}
+
+
+\pagebreak
+
+\section{Soil Erosion}
+
+%https://gisgeography.com/sentinel-2-bands-combinations/
+
+\pagebreak
+
+
+\section{Figures}
+\subsection{Land Use by Kebeles}
+
+
+\subsubsection{Afesa}
+
+
+\begin{figure}[H] \centering
+  \captionsetup{justification=centering}
+\caption{Land Use} 
+\centering
+
+
+\includegraphics[scale=0.15]{../views/Afesa_land_use_final.png}
+
+\end{figure}
+
+
+
+\subsubsection{Bachema}
+
+
+
+\begin{figure}[H] \centering
+  \captionsetup{justification=centering}
+\caption{Land Use} 
+\centering
+
+
+\includegraphics[scale=0.15]{../views/Bachema_land_use_final.png}
+
+\end{figure}
+
+%----------------------------------------------------------------%
+
+\pagebreak
+
+
+\subsubsection{Dil-betegel}
+
+
+\begin{figure}[H] \centering
+  \captionsetup{justification=centering}
+\caption{Land Use} 
+\centering
+
+
+\includegraphics[scale=0.15]{../views/Dil-betegel_land_use_final.png}
+
+\end{figure}
+
+
+
+
+\subsubsection{Enashenefalen}
+
+
+\begin{figure}[H] \centering
+  \captionsetup{justification=centering}
+\caption{Land Use} 
+\centering
+
+
+\includegraphics[scale=0.15]{../views/Enashenefalen_land_use_final.png}
+
+\end{figure}
+
+
+%----------------------------------------------------------------%
+
+\pagebreak
+
+
+\subsubsection{Guiete}
+
+
+\begin{figure}[H] \centering
+  \captionsetup{justification=centering}
+\caption{Land Use} 
+\centering
+
+
+\includegraphics[scale=0.15]{../views/Guiete_land_use_final.png}
+
+\end{figure}
+
+\subsubsection{Gulet Abeshekan}
+
+
+\begin{figure}[H] \centering
+  \captionsetup{justification=centering}
+\caption{Land Use} 
+\centering
+
+
+\includegraphics[scale=0.15]{../views/Gulet_Abeshekan_land_use_final.png}
+
+\end{figure}
+
+
+
+%----------------------------------------------------------------%
+
+\pagebreak
+
+
+\subsubsection{Legaba}
+
+\begin{figure}[H] \centering
+  \captionsetup{justification=centering}
+\caption{Land Use} 
+\centering
+
+
+\includegraphics[scale=0.15]{../views/legaba_land_use_final.png}
+
+\end{figure}
+
+
+
+\subsubsection{Wufeta Dati}
+
+
+\begin{figure}[H] \centering
+  \captionsetup{justification=centering}
+\caption{Land Use} 
+\centering
+
+
+\includegraphics[scale=0.15]{../views/Wufeta_Dati_land_use_final.png}
+
+\end{figure}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   APPENDIX   Tables         %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagebreak
+\appendix
+\renewcommand{\theequation}{\Alph{chapter}.\arabic{equation}}
+
+\setcounter{figure}{0}
+\setcounter{table}{0}
+\makeatletter 
+\renewcommand{\thefigure}{A.\@arabic\c@figure}
+\renewcommand{\thetable}{A.\@arabic\c@table}
+
+\section{Appendix: Details K-shape algorithm}
+
+\subsubsection{One iteration using smoothed NDVI}
 
 
 \input{../views/confusion_smooth_undersampling.tex}
@@ -275,40 +452,6 @@ None of these were successfull so far
 
 
 
-\subsubsection{NDVI}
-
-\input{../views/confusion_undersampling.tex}
-
-  \begin{figure}[H] \centering
-            \captionsetup{justification=centering}
-              \includegraphics[scale=0.5]{../views/centroids_all_regions_undersampling.pdf}
-              
- \end{figure}
-
-
-  \begin{figure}[H] \centering
-            \captionsetup{justification=centering}
-              \includegraphics[scale=0.5]{../views/series_all_regions_undersampling.pdf}
-              
- \end{figure}
-
- \input{../views/eval_undersampling.tex}
-\input{../views/eval_undersampling_max_cluster.tex}
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%   APPENDIX   Tables         %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\pagebreak
-\appendix
-\renewcommand{\theequation}{\Alph{chapter}.\arabic{equation}}
-
-\setcounter{figure}{0}
-\setcounter{table}{0}
-\makeatletter 
-\renewcommand{\thefigure}{A.\@arabic\c@figure}
-\renewcommand{\thetable}{A.\@arabic\c@table}
 
 \section{Appendix: Tables and Figures}\label{sec:appendix_tables} 
 
@@ -354,12 +497,31 @@ NA              & 4        & 5742.78    & NA   & NA      & NA              & NA 
 \end{tabular}
 \end{table}
 
+\pagebreak
+
+\begin{figure}[H] \centering
+            \caption{Average Smoothed NDVI by Land Use}
+            \captionsetup{justification=centering}
+              \includegraphics[scale=0.15]{../views/NDVI_average_raw_final_db_regions.png}
+              
+ \end{figure}
+
+
+
+  \begin{figure}[H] \centering
+            \caption{Average Smoothed by Land Use}
+            \captionsetup{justification=centering}
+              \includegraphics[scale=0.15]{../views/NDVI_average_smooth_final_db_regions}
+              
+ \end{figure}
+
+
 
 
 
 \pagebreak
 
-\subsubsection{Figures: Land Use and NDVI by Kebele }
+\section{Appendix: Original Land Use and NDVI by Kebele }
 
 
 \begin{figure}[H] \centering
@@ -402,9 +564,9 @@ NA              & 4        & 5742.78    & NA   & NA      & NA              & NA 
 \pagebreak
 %----------------------------------------------------------------%
 
-\section{By Kebeles}
+\subsection{By Kebeles}
 
-\subsection{Afesa}
+\subsubsection{Afesa}
 \begin{figure}[H] \centering
   \captionsetup{justification=centering}
 \caption{NDVI: Average time series } 
@@ -433,7 +595,7 @@ NA              & 4        & 5742.78    & NA   & NA      & NA              & NA 
 \pagebreak
 
 
-\subsection{Bachema}
+\subsubsection{Bachema}
 
 
 \begin{figure}[H] \centering
@@ -463,7 +625,7 @@ NA              & 4        & 5742.78    & NA   & NA      & NA              & NA 
 \pagebreak
 
 
-\subsection{Dil-betegel}
+\subsubsection{Dil-betegel}
 \begin{figure}[H] \centering
   \captionsetup{justification=centering}
 \caption{NDVI: Average time series } 
@@ -491,7 +653,7 @@ NA              & 4        & 5742.78    & NA   & NA      & NA              & NA 
 \pagebreak
 
 
-\subsection{Enashenefalen}
+\subsubsection{Enashenefalen}
 \begin{figure}[H] \centering
   \captionsetup{justification=centering}
 \caption{NDVI: Average time series } 
@@ -518,7 +680,7 @@ NA              & 4        & 5742.78    & NA   & NA      & NA              & NA 
 \pagebreak
 
 
-\subsection{Guiete}
+\subsubsection{Guiete}
 \begin{figure}[H] \centering
   \captionsetup{justification=centering}
 \caption{NDVI: Average time series } 
@@ -545,7 +707,7 @@ NA              & 4        & 5742.78    & NA   & NA      & NA              & NA 
 \pagebreak
 
 
-\subsection{Gulet Abeshekan}
+\subsubsection{Gulet Abeshekan}
 \begin{figure}[H] \centering
   \captionsetup{justification=centering}
 \caption{NDVI: Average time series } 
@@ -574,7 +736,7 @@ NA              & 4        & 5742.78    & NA   & NA      & NA              & NA 
 \pagebreak
 
 
-\subsection{Legaba}
+\subsubsection{Legaba}
 \begin{figure}[H] \centering
   \captionsetup{justification=centering}
 \caption{NDVI: Average time series } 
@@ -601,7 +763,7 @@ NA              & 4        & 5742.78    & NA   & NA      & NA              & NA 
 \pagebreak
 
 
-\subsection{Wufeta Dati}
+\subsubsection{Wufeta Dati}
 \begin{figure}[H] \centering
   \captionsetup{justification=centering}
 \caption{NDVI: Average time series } 
@@ -622,5 +784,52 @@ NA              & 4        & 5742.78    & NA   & NA      & NA              & NA 
 \includegraphics[scale=0.15]{../views/Wufeta_Dati_land_use.png}
 
 \end{figure}
+
+\pagebreak
+
+
+
+\section{Other unsuccessful approaches}
+
+\subsection{Cross Sectional Variation}
+
+I modeled land use as a function of the 4 bands and the NDVI:
+
+
+$$Land\,Use_{ij} = f(Blue,Green,Red,NIR,NDVI) + u_{ij}$$
+
+%Land\,Use_{ij} = f(Blue, Green, Red, NIR, NDVI) + u_{ij}
+where $Land\,Use_{ij}$ is the land use in pixel $i$ of polygon $j$. $f$ is the ML function that we use to predict land use. We explore 3 classes of models:
+
+\begin{itemize}
+  \item Binary classifications: In this case $Land\,Use_{ij}=I(Land\,Use_{ij}==Improved\,Forage)$ and 0 are the other classes
+  \item Multiclass classification where $Land\,Use_{ij}$ takes 4 classes: Improved Forage, Crop, Grazing, and Tree
+\end{itemize}
+
+The challenge was incorporating the time dimension, one approach was collapse to a single cross section and in different variables consider multiple moments  of the distribution of predictors: mean, sd, iqr, max, min. I did these for within pixel and between pixels of the same polygon for the entire time series, and quarterly (approximating the seasons, although there are no seasons in Ethiopia, but the idea was trying to capture the cycles seen in the time series).
+None of these were successful so far...
+
+
+
+\subsection{Time Series Variation: K-shapes, Raw NDVI time series}
+
+\input{../views/confusion_undersampling.tex}
+
+  \begin{figure}[H] \centering
+            \captionsetup{justification=centering}
+              \includegraphics[scale=0.5]{../views/centroids_all_regions_undersampling.pdf}
+              
+ \end{figure}
+
+
+  \begin{figure}[H] \centering
+            \captionsetup{justification=centering}
+              \includegraphics[scale=0.5]{../views/series_all_regions_undersampling.pdf}
+              
+ \end{figure}
+
+ \input{../views/eval_undersampling.tex}
+\input{../views/eval_undersampling_max_cluster.tex}
+
 
 \end{document}

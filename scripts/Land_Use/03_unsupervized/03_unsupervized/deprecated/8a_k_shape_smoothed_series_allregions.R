@@ -1,0 +1,59 @@
+##########################################################
+# author: Ignacio Sarmiento-Barbieri
+##########################################################
+
+#Clean the workspace
+rm(list=ls())
+cat("\014")
+local({r <- getOption("repos"); r["CRAN"] <- "http://cran.r-project.org"; options(repos=r)}) #set repo
+gc() # free up memory and report memory usage
+
+
+
+pkg<-list("tidyverse","here","dtwclust","TSclust","parallel")
+lapply(pkg, require, character.only=T)
+rm(pkg)
+
+
+
+# Load Data ---------------------------------------------------------------
+dta<-readRDS(here("data/base_panel.Rds"))
+
+ndvi<- dta %>% 
+  arrange(panel_id,date,land_use) %>% 
+  select(land_use,panel_id,date,ndvi_w_center_9) %>% 
+  distinct(land_use,panel_id,date,.keep_all = TRUE)%>% 
+  ungroup() 
+
+
+ndvi_long<-  ndvi %>% pivot_wider(names_from=date,values_from=ndvi_w_center_9) 
+ndvi_long<- ndvi_long %>% select(where(~!any(is.na(.))))
+labels_ndvi_long<- ndvi_long %>% select(land_use,panel_id)
+ndvi_long<- ndvi_long %>% select(-land_use,-panel_id)
+
+
+ts_ndvi_long<-tslist(ndvi_long)
+
+
+# create multi-process workers
+workers <- makeCluster(detectCores())
+# load dtwclust in each one, and make them use 1 thread per worker
+invisible(clusterEvalQ(workers, {
+  library(dtwclust)
+  RcppParallel::setThreadOptions(1L)
+}))
+# register your workers, e.g. with doParallel
+require(doParallel)
+registerDoParallel(workers)
+
+
+
+
+
+pc_clusters<-tsclust(ts_ndvi_long, k = 2L:16L, distance = "sbd", centroid = "shape", seed = 8, trace = TRUE)
+
+stopCluster(workers)
+# Return to sequential computations. 
+registerDoSEQ()
+
+save.image(here("data/results/kshape_all_smoothed.RData"))

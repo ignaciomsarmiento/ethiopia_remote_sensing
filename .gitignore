@@ -1,10 +1,11 @@
 
 
+
 *.lyx 
 data/*
 Sen2Cor*
 views/*
-
+scripts/planetR/PlanetR*
 ### macOS ###
 # General
 .DS_Store
